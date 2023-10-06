@@ -54,4 +54,4 @@ jobs:
         pdm run python -m black --check --diff .
     - name: Lint with flake8
       run: |
-        - pdm run python -m flake8p
+        pdm run python -m flake8p
