@@ -13,7 +13,7 @@ from aio_pika.abc import (
 from aio_pika.pool import Pool
 from aiormq.tools import awaitable
 
-from aioka.handler.base import BaseAction
+from aioka.action.base import BaseAction
 from aioka.server.base import BaseServer
 
 logger = logging.getLogger(__name__)
@@ -77,15 +77,15 @@ class Master:
         return await self.channel.declare_queue(channel_name, **kwargs)
 
     async def create_worker(
-        self, channel_name: str, procedure: BaseAction, **kwargs
+        self, channel_name: str, action: BaseAction, **kwargs
     ) -> Worker:
         queue = await self.create_queue(channel_name, **kwargs)
 
-        await procedure.set_client(self.publish)
-        if hasattr(procedure.consume, "_is_coroutine"):
-            fn = procedure.consume
+        await action.set_client(self.publish)
+        if hasattr(action.consume, "_is_coroutine"):
+            fn = action.consume
         else:
-            fn = awaitable(procedure.consume)
+            fn = awaitable(action.consume)
 
         consumer_tag = await queue.consume(fn)
         worker = Worker(queue, consumer_tag, self._loop)
@@ -193,7 +193,7 @@ class AsyncRqMasterServer(BaseServer):
         self.connection_pool = Pool(
             get_connection, max_size=self.connection_pool_size
         )
-        self.channel_pool = Pool(get_channel, max_size=self.channel_pool)
+        self.channel_pool = Pool(get_channel, max_size=self.channel_pool_size)
 
         async with self.channel_pool.acquire() as channel:  # type: Channel
             await channel.set_qos(

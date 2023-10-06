@@ -1,35 +1,12 @@
-from abc import ABC, abstractmethod
-from typing import AsyncIterable, Callable, Coroutine, Optional, Type
+from functools import wraps
+from typing import AsyncIterable, Awaitable, Callable, Type
 
-from aio_pika import IncomingMessage
 from pydantic import BaseModel
 
+from aioka.action.base import BaseAction
+from aioka.action.master import Action
+from aioka.server import RequestMeta, ResponseMeta
 from aioka.server.base import BaseServer
-
-
-class BaseAction(ABC):
-    """
-    Base class for actions called by routes
-
-    :param action_name: Procedure name to indicate in routing
-    """
-
-    def __init__(self, action_name: str):
-        self.action_name = action_name
-        self.client: Optional[Callable[..., Coroutine[any, any, any]]] = None
-
-    async def set_client(
-        self, client: Callable[..., Coroutine[any, any, any]]
-    ):
-        self.client = client
-
-    @abstractmethod
-    async def __call__(self, payload: BaseModel):
-        raise NotImplementedError
-
-    @abstractmethod
-    async def consume(self, message: IncomingMessage):
-        raise NotImplementedError
 
 
 class BaseHandler:
@@ -40,26 +17,60 @@ class BaseHandler:
 
     __slots__ = ("routes", "server")
 
-    routes: dict[str, Type[BaseAction]]
+    server: BaseServer
 
-    @classmethod
-    async def create(cls, server: BaseServer):
+    def __init__(self):
+        self.routes: dict[str, Type[BaseAction]] = {}
+
+    def set_server(self, server: BaseServer):
         """
         Фабрика для асинхронного создания инстанса класса
 
         :param server: Кастомный сервер, базирующейся на BaseServer
         """
-        self = BaseHandler()
         self.server = server
-        self.routes = cls.routes
         return self
 
     async def _bind_procedures(self) -> AsyncIterable:
-        for route, action in self.routes.items():
-            action_instance: BaseAction = action(route)
+        for action_name, action_instance in self.routes.items():
+            action_instance.service_name = self.server.service_name
             yield action_instance
 
     async def bind(self):
         """Метод для биндинга процедур к серверу"""
         async for procedure in self._bind_procedures():
             await self.server.bind(procedure.action_name, procedure)
+
+    def add_action(self, action_name: str, action: BaseAction):
+        self.routes.update({action_name: action})
+
+    def action(
+        self,
+        action_name: str,
+        request_payload: BaseModel = BaseModel,
+        response_payload: BaseModel = BaseModel,
+        request_meta: RequestMeta = RequestMeta,
+        response_meta: ResponseMeta = ResponseMeta,
+        action_class: Type[BaseAction] = Action,
+    ):
+        def decorator(
+            func: Callable[
+                [BaseModel, BaseModel],
+                Awaitable[BaseModel | dict | list | None],
+            ]
+        ) -> BaseAction:
+            @wraps(func)
+            async def wrapper(meta: request_meta, payload: request_payload):
+                return await func(meta, payload)
+
+            action = action_class(action_name=action_name)
+            action.__call__ = wrapper
+            action.REQUEST_PAYLOAD = request_payload
+            action.RESPONSE_PAYLOAD = response_payload
+            action.REQUEST_META = request_meta
+            action.RESPONSE_META = response_meta
+
+            self.add_action(action_name=action_name, action=action)
+            return action
+
+        return decorator
