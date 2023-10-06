@@ -10,16 +10,16 @@ on:
       - "*.py"
       - "**/*.py"
       - pdm.lock
+      - .github/workflows/python-package.yml
   pull_request:
     branches: [ "master" ]
     paths:
       - "*.py"
       - "**/*.py"
       - pdm.lock
-
+      - .github/workflows/python-package.yml
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
