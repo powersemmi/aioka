@@ -32,10 +32,7 @@ class Worker:
         self.loop = loop
 
     def close(self) -> asyncio.Task:
-        """Cancel subscription to the channel
-
-        :return: :class:`asyncio.Task`
-        """
+        """Cancel subscription to the channel"""
 
         async def closer():
             await self.queue.cancel(self.consumer_tag)
