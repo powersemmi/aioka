@@ -44,7 +44,6 @@ class AsyncApp:
         self,
         server: BaseServer,
         enable_handlers: list[str] | None = None,
-        log_config: dict | None = None,
     ):
         self.server = server
         self._handlers: dict[str, Type[BaseHandler]] = get_handlers()
@@ -54,7 +53,6 @@ class AsyncApp:
         self.uvicorn_asgi: Optional[uvicorn.Server] = None
         self.rq_conn: Optional[Connection] = None
         self._enable_handlers = enable_handlers
-        self._log_config = log_config
 
     def run(self):
         logger.info("%s try start", self.server.service_name)
@@ -80,9 +78,7 @@ class AsyncApp:
             await handler.bind()
 
     def add_uvicorn_asgi(self, app: Type[ASGIApplication], **kwargs):
-        config = uvicorn.Config(
-            app, log_config=self._log_config, lifespan="on", **kwargs
-        )
+        config = uvicorn.Config(app, lifespan="on", **kwargs)
         server = UvicornServer(config=config)
         with server.run_in_thread():
             self._loop.create_task(server.serve())
@@ -101,19 +97,15 @@ class AsyncApp:
 
 async def async_create_app(server: Type[BaseServer], **kwargs) -> AsyncApp:
     server = await server.create(**kwargs)
-    app = AsyncApp(server)
+    app = AsyncApp(server=server)
     await app.bind()
     return app
 
 
-def create_app_contextmanager(
+def create_app(
     server: Type[BaseServer],
     loop: asyncio.AbstractEventLoop = asyncio.get_event_loop(),
     **kwargs,
 ):
     app = loop.run_until_complete(async_create_app(server, **kwargs))
     return app
-
-
-def create_app(server: Type[BaseServer]):
-    return create_app_contextmanager(server)

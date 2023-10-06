@@ -1,6 +1,6 @@
 [project]
 name = "aioka"
-version = "0.1.0"
+version = "0.1.1"
 description = "aio-pika framework"
 authors = [
     {name = "Chebotarev Victor", email = "powersemmi@gmail.com"},
@@ -9,6 +9,7 @@ dependencies = [
     "aio-pika>=9.3.0",
     "pytz>=2023.3.post1",
     "pydantic>=2.4.2",
+    "uvicorn[standart]>=0.23.2",
 ]
 requires-python = ">=3.11"
 readme = "README.md"
