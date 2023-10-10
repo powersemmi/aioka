@@ -59,7 +59,9 @@ class Action(BaseAction):
                 json_data = json.loads(message.body)
             except json.JSONDecodeError as e:
                 logger.error("Is not JSON", exc_info=True)
-                error_message = gen_error_message(message.body, e)
+                error_message = gen_error_message(
+                    message.body, e, service_name=self.service_name
+                )
                 await self.publish(message=error_message)
                 return
             # 1.2 десериализовать сообщение
@@ -73,7 +75,9 @@ class Action(BaseAction):
 
             except ValidationError as e:
                 logger.error("Meta is not valid", exc_info=True)
-                error_message = gen_error_message(message.body, e)
+                error_message = gen_error_message(
+                    message.body, e, service_name=self.service_name
+                )
                 await self.publish(message=error_message)
                 return
             # 1.4 проверить корректность payload
@@ -83,7 +87,9 @@ class Action(BaseAction):
                 )
             except ValidationError as e:
                 logger.error("Payload is not valid", exc_info=True)
-                error_message = gen_error_message(message.body, e)
+                error_message = gen_error_message(
+                    message.body, e, service_name=self.service_name
+                )
                 await self.publish(message=error_message)
                 if meta_obj.reply_to:
                     await self.publish(
@@ -106,7 +112,10 @@ class Action(BaseAction):
                     f"Unhandled exception in {self.__call__}", exc_info=True
                 )
                 error_message = gen_error_message(
-                    message.body, e, error_type="internal"
+                    message.body,
+                    e,
+                    error_type="internal",
+                    service_name=self.service_name,
                 )
                 await self.publish(message=error_message)
                 if meta_obj.reply_to:

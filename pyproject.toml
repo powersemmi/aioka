@@ -1,6 +1,6 @@
 [project]
 name = "aioka"
-version = "0.2.0"
+version = "0.2.2"
 description = "aio-pika framework"
 authors = [
     {name = "Chebotarev Victor", email = "powersemmi@gmail.com"},

@@ -45,6 +45,7 @@ class JsonEncoder(JSONEncoder):
 def gen_error_message(
     raw_message,
     e,
+    service_name: str,
     error_type: Literal["internal", "validation"] = "validation",
 ):
     if error_type == "validation":
@@ -72,7 +73,7 @@ def gen_error_message(
             raw_message=raw_message,
         )
 
-    meta_response = create_error_response_meta()
+    meta_response = create_error_response_meta(service_name=service_name)
 
     error_message = json.dumps(
         create_message(meta_response, error.model_dump(by_alias=True)),
